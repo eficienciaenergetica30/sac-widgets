@@ -7,14 +7,6 @@
       super();
       this._shadowRoot = this.attachShadow({ mode: "open" });
       this._shadowRoot.appendChild(template.content.cloneNode(true));
-      
-      // Propiedad donde guardaremos el JSON como texto para SAC
-      this._apiResponseString = "";
-    }
-
-    // Getter para que SAC pueda leer el resultado
-    get apiResponseString() {
-      return this._apiResponseString;
     }
 
     async obtenerPersonajes() {
@@ -23,21 +15,20 @@
         const respuesta = await fetch(url);
         const data = await respuesta.json();
         
-        // Tomamos el primer personaje de la lista
         const primerPersonaje = data.results[0]; 
 
-        // Creamos un objeto limpio con lo que nos interesa
         const datosFiltrados = {
           nombre: primerPersonaje.name,
           estado: primerPersonaje.status,
           especie: primerPersonaje.species
         };
 
-        // Lo convertimos a String para que SAC lo pueda recibir
-        this._apiResponseString = JSON.stringify(datosFiltrados);
-        
-        // Le avisamos a SAC que los datos están listos
-        this.dispatchEvent(new CustomEvent("onDataReady", { detail: { void: true } }));
+        // PASO CLAVE: Mandamos el JSON como un parámetro llamado apiResponse
+        this.dispatchEvent(new CustomEvent("onDataReady", { 
+          detail: { 
+            apiResponse: JSON.stringify(datosFiltrados) 
+          } 
+        }));
 
       } catch (error) {
         console.error("Error en la API:", error);
