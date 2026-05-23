@@ -1,45 +1,48 @@
 (function () {
   let template = document.createElement("template");
-  template.innerHTML = `
-    <style>
-      :host { display: none; }
-    </style>
-  `;
+  template.innerHTML = `<style>:host { display: none; }</style>`;
 
   class SACRickAndMorty extends HTMLElement {
     constructor() {
       super();
       this._shadowRoot = this.attachShadow({ mode: "open" });
       this._shadowRoot.appendChild(template.content.cloneNode(true));
+      
+      // Propiedad donde guardaremos el JSON como texto para SAC
+      this._apiResponseString = "";
     }
 
-    // Este es el método que llamará tu botón de SAC
+    // Getter para que SAC pueda leer el resultado
+    get apiResponseString() {
+      return this._apiResponseString;
+    }
+
     async obtenerPersonajes() {
       const url = "https://rickandmortyapi.com/api/character";
-      
       try {
-        console.log("Iniciando petición a la API de Rick y Morty...");
-        const respuesta = await fetch(url, { method: "GET" });
-
-        if (!respuesta.ok) {
-          throw new Error(`Error HTTP: ${respuesta.status}`);
-        }
-
+        const respuesta = await fetch(url);
         const data = await respuesta.json();
         
-        // Imprimimos los resultados en la consola del navegador para verificar
-        console.log("¡Datos recibidos de la API con éxito!", data.results);
+        // Tomamos el primer personaje de la lista
+        const primerPersonaje = data.results[0]; 
+
+        // Creamos un objeto limpio con lo que nos interesa
+        const datosFiltrados = {
+          nombre: primerPersonaje.name,
+          estado: primerPersonaje.status,
+          especie: primerPersonaje.species
+        };
+
+        // Lo convertimos a String para que SAC lo pueda recibir
+        this._apiResponseString = JSON.stringify(datosFiltrados);
         
-        // Aquí podrías iterar los personajes o enviarlos a otra parte
-        data.results.forEach(personaje => {
-            console.log(`Personaje: ${personaje.name} - Especie: ${personaje.species}`);
-        });
+        // Le avisamos a SAC que los datos están listos
+        this.dispatchEvent(new CustomEvent("onDataReady", { detail: { void: true } }));
 
       } catch (error) {
-        console.error("Error al consumir la API desde el Custom Widget:", error);
+        console.error("Error en la API:", error);
       }
     }
   }
-
   customElements.define("com-empresa-rickandmorty", SACRickAndMorty);
 })();
