@@ -7,28 +7,24 @@
       super();
       this._shadowRoot = this.attachShadow({ mode: "open" });
       this._shadowRoot.appendChild(template.content.cloneNode(true));
-      
-      // Variable interna para guardar los datos temporalmente
       this._apiResponseString = "";
     }
 
     async obtenerPersonajes() {
+      // COMENTARIO DE CONTROL: v1.0.5-FINAL
       const url = "https://rickandmortyapi.com/api/character";
       try {
         const respuesta = await fetch(url);
         const data = await respuesta.json();
-        
         const primerPersonaje = data.results[0]; 
+        
         const datosFiltrados = {
           nombre: primerPersonaje.name,
           estado: primerPersonaje.status,
           especie: primerPersonaje.species
         };
 
-        // Guardamos el JSON en la variable interna
         this._apiResponseString = JSON.stringify(datosFiltrados);
-        
-        // Disparamos el evento limpio, totalmente sin parámetros
         this.dispatchEvent(new CustomEvent("onDataReady"));
 
       } catch (error) {
@@ -36,7 +32,7 @@
       }
     }
 
-    // NUEVO MÉTODO: SAC llamará a esta función para obtener el texto
+    // Asegúrate de que esta función exista exactamente aquí, antes de cerrar la clase
     getApiResponse() {
       return this._apiResponseString;
     }
