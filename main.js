@@ -15,22 +15,28 @@
     }
 
     async obtenerPersonajes() {
-      const url = "https://rickandmortyapi.com/api/character"; // v1.0.6-definitivo
+      // 1. Generamos un ID aleatorio entre 1 y 826 (el total de personajes de la API)
+      const min = 1;
+      const max = 826;
+      const idAleatorio = Math.floor(Math.random() * (max - min + 1)) + min;
+
+      // 2. Le pegamos al endpoint específico del personaje aleatorio
+      const url = `https://rickandmortyapi.com/api/character/${idAleatorio}`;
+      
       try {
         const respuesta = await fetch(url);
-        const data = await respuesta.json();
-        const primerPersonaje = data.results[0]; 
+        const personaje = await respuesta.json(); // La API aquí ya devuelve el objeto directo, no un arreglo
         
-        // Guardamos los datos limpios en texto plano
-        this._nombre = primerPersonaje.name;
-        this._estado = primerPersonaje.status;
-        this._especie = primerPersonaje.species;
+        // 3. Guardamos los datos correctamente emparejados en las variables que SAC ya conoce
+        this._nombre = personaje.name;
+        this._estado = personaje.status;
+        this._especie = personaje.species;
 
-        // Avisamos a SAC que los datos ya están listos
+        // 4. Avisamos a SAC que los datos están listos para que los pinte
         this.dispatchEvent(new CustomEvent("onDataReady"));
 
       } catch (error) {
-        console.error("Error en la API:", error);
+        console.error("Error al obtener el personaje aleatorio:", error);
       }
     }
 
