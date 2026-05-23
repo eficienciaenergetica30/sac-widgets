@@ -7,51 +7,22 @@
       super();
       this._shadowRoot = this.attachShadow({ mode: "open" });
       this._shadowRoot.appendChild(template.content.cloneNode(true));
-      
-      // Variables individuales limpias para SAC
-      this._nombre = "";
-      this._estado = "";
-      this._especie = "";
+      this._data = { name: "Cargando...", status: "...", species: "..." };
     }
 
     async obtenerPersonajes() {
-      // 1. Generamos un ID aleatorio entre 1 y 826 (el total de personajes de la API)
-      const min = 1;
-      const max = 826;
-      const idAleatorio = Math.floor(Math.random() * (max - min + 1)) + min;
-
-      // 2. Le pegamos al endpoint específico del personaje aleatorio
-      const url = `https://rickandmortyapi.com/api/character/${idAleatorio}`;
-      
+      const id = Math.floor(Math.random() * 826) + 1;
       try {
-        const respuesta = await fetch(url);
-        const personaje = await respuesta.json(); // La API aquí ya devuelve el objeto directo, no un arreglo
-        
-        // 3. Guardamos los datos correctamente emparejados en las variables que SAC ya conoce
-        this._nombre = personaje.name;
-        this._estado = personaje.status;
-        this._especie = personaje.species;
-
-        // 4. Avisamos a SAC que los datos están listos para que los pinte
+        const res = await fetch(`https://rickandmortyapi.com/api/character/${id}`);
+        const json = await res.json();
+        this._data = { name: json.name, status: json.status, species: json.species };
         this.dispatchEvent(new CustomEvent("onDataReady"));
-
-      } catch (error) {
-        console.error("Error al obtener el personaje aleatorio:", error);
-      }
+      } catch (e) { console.error(e); }
     }
 
-    // TRES MÉTODOS LIMPIOS QUE SAC VA A RECONOCER
-    getNombre() {
-      return this._nombre;
-    }
-
-    getEstado() {
-      return this._estado;
-    }
-
-    getEspecie() {
-      return this._especie;
-    }
+    getNombre() { return this._data.name; }
+    getEstado() { return this._data.status; }
+    getEspecie() { return this._data.species; }
   }
-  customElements.define("com-empresa-rickandmorty", SACRickAndMorty);
+  customElements.define("com-empresa-rickandmorty-v2", SACRickAndMorty);
 })();
