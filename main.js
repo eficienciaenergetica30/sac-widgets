@@ -15,7 +15,7 @@
     }
 
     async obtenerPersonajes() {
-      const url = "https://rickandmortyapi.com/api/character";
+      const url = "https://rickandmortyapi.com/api/character"; // v1.0.6-definitivo
       try {
         const respuesta = await fetch(url);
         const data = await respuesta.json();
