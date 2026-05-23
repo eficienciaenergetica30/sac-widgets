@@ -7,24 +7,26 @@
       super();
       this._shadowRoot = this.attachShadow({ mode: "open" });
       this._shadowRoot.appendChild(template.content.cloneNode(true));
-      this._apiResponseString = "";
+      
+      // Variables individuales limpias para SAC
+      this._nombre = "";
+      this._estado = "";
+      this._especie = "";
     }
 
     async obtenerPersonajes() {
-      // COMENTARIO DE CONTROL: v1.0.5-FINAL
       const url = "https://rickandmortyapi.com/api/character";
       try {
         const respuesta = await fetch(url);
         const data = await respuesta.json();
         const primerPersonaje = data.results[0]; 
         
-        const datosFiltrados = {
-          nombre: primerPersonaje.name,
-          estado: primerPersonaje.status,
-          especie: primerPersonaje.species
-        };
+        // Guardamos los datos limpios en texto plano
+        this._nombre = primerPersonaje.name;
+        this._estado = primerPersonaje.status;
+        this._especie = primerPersonaje.species;
 
-        this._apiResponseString = JSON.stringify(datosFiltrados);
+        // Avisamos a SAC que los datos ya están listos
         this.dispatchEvent(new CustomEvent("onDataReady"));
 
       } catch (error) {
@@ -32,9 +34,17 @@
       }
     }
 
-    // Asegúrate de que esta función exista exactamente aquí, antes de cerrar la clase
-    getApiResponse() {
-      return this._apiResponseString;
+    // TRES MÉTODOS LIMPIOS QUE SAC VA A RECONOCER
+    getNombre() {
+      return this._nombre;
+    }
+
+    getEstado() {
+      return this._estado;
+    }
+
+    getEspecie() {
+      return this._especie;
     }
   }
   customElements.define("com-empresa-rickandmorty", SACRickAndMorty);
