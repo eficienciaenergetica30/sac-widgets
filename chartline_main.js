@@ -31,9 +31,15 @@ var loadScript = (src) => {
     }
 
     async connectedCallback() {
-      await loadScript('https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js');
-      this._chart = echarts.init(this._chartContainer);
-      this.render();
+      try {
+        await loadScript('https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js');
+        if (!this._chart) {
+          this._chart = echarts.init(this._chartContainer);
+        }
+        this.render();
+      } catch (e) {
+        console.error("Error al cargar ECharts:", e);
+      }
     }
 
     onCustomWidgetResize() {
@@ -73,12 +79,10 @@ var loadScript = (src) => {
         let seriesMap = {};
         let measureLabel = 'Valor';
 
-        // Parsing dinámico de cualquier modelo y medida en SAC
-        if (this._myDataBinding && this._myDataBinding.data && this._myDataBinding.data.length > 0) {
+        if (this._myDataBinding && this._myDataBinding.data && Array.isArray(this._myDataBinding.data) && this._myDataBinding.data.length > 0) {
           const rawData = this._myDataBinding.data;
           let catsSet = new Set();
 
-          // Intentar obtener el nombre de la medida seleccionada dinámicamente
           if (this._myDataBinding.metadata && this._myDataBinding.metadata.feeds) {
             const mFeed = this._myDataBinding.metadata.feeds.measures;
             if (mFeed && mFeed.values && mFeed.values.length > 0) {
@@ -87,27 +91,29 @@ var loadScript = (src) => {
           }
 
           rawData.forEach(row => {
-            // Lectura defensiva de dimensiones y medidas
             const dims = row.dimensions || [];
-            const mes = dims[0]?.label || dims[0]?.id || 'N/A';
-            const anio = dims[1]?.label || dims[1]?.id || 'Serie 1';
+            const mes = (dims[0] && (dims[0].label || dims[0].id)) ? (dims[0].label || dims[0].id) : 'N/A';
+            const anio = (dims[1] && (dims[1].label || dims[1].id)) ? (dims[1].label || dims[1].id) : 'Serie 1';
 
-            // Extracción agnóstica del valor de la medida
             let val = null;
             if (row.measures) {
-              const firstMeasureKey = Object.keys(row.measures)[0];
-              const mObj = row.measures[firstMeasureKey];
-              val = mObj?.raw !== undefined ? mObj.raw : (mObj?.value !== undefined ? mObj.value : mObj);
+              if (Array.isArray(row.measures) && row.measures.length > 0) {
+                const m = row.measures[0];
+                val = m?.raw !== undefined ? m.raw : (m?.value !== undefined ? m.value : m);
+              } else if (typeof row.measures === 'object') {
+                const firstKey = Object.keys(row.measures)[0];
+                const m = row.measures[firstKey];
+                val = m?.raw !== undefined ? m.raw : (m?.value !== undefined ? m.value : m);
+              }
             }
 
             catsSet.add(mes);
             if (!seriesMap[anio]) { seriesMap[anio] = {}; }
-            seriesMap[anio][mes] = (val !== null && !isNaN(val)) ? Number(val) : null;
+            seriesMap[anio][mes] = (val !== null && val !== undefined && !isNaN(Number(val))) ? Number(val) : null;
           });
 
           if (catsSet.size > 0) { categories = Array.from(catsSet); }
         } else {
-          // Fallback de demostración
           seriesMap = {
             '2024': { '01': 8700000, '02': 9888876, '03': 11750914, '04': 16114317, '05': 12472668, '06': 15427862, '07': 18411413, '08': 12157993, '09': 9755709, '10': 8455860, '11': 9181245, '12': 9169808 },
             '2025': { '01': 9888876, '02': 11083120, '03': 11750914, '04': 12519129, '05': 15427862, '06': 11553276, '07': 10545410, '08': 12157993, '09': 9879296, '10': 9181245, '11': 10426376, '12': 12800000 },
@@ -168,8 +174,7 @@ var loadScript = (src) => {
             valueFormatter: (value) => value !== null && value !== undefined ? new Intl.NumberFormat('en-US').format(value) : '-'
           },
           legend: {
-            bottom: 5,
-            icon: 'inherit' // La leyenda usará automáticamente el nodo correspondiente (círculo, cuadrado, triángulo)
+            bottom: 5
           },
           grid: { left: '8%', right: '5%', bottom: '15%', top: '15%', containLabel: true },
           xAxis: {
@@ -192,7 +197,7 @@ var loadScript = (src) => {
 
         this._chart.setOption(option, true);
       } catch (err) {
-        console.error("BWLineChart Render Error:", err);
+        console.error("BWLineChart Render Internal Exception:", err);
       }
     }
   }
