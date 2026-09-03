@@ -169,6 +169,14 @@
       const seriesNames = Object.keys(seriesMap).sort();
 
       // 5. Construcción de series optimizada para Impresión y despeje de líneas
+      // Mapeo de símbolos Unicode para acompañar la cifra según el tipo de nodo
+      const symbolIcons = {
+        'circle': '●',
+        'rect': '■',
+        'triangle': '▲',
+        'diamond': '◆'
+      };
+
       const positions = ['top', 'bottom', 'top', 'bottom'];
 
       const echartsSeries = seriesNames.map((sName, idx) => {
@@ -179,6 +187,7 @@
         const firstVal = firstValidIdx !== -1 ? dataValues[firstValidIdx] : null;
 
         const currentPosition = positions[idx % positions.length];
+        const iconSymbol = symbolIcons[style.symbol] || '●';
 
         return {
           name: sName,
@@ -195,16 +204,18 @@
             fontSize: 8.5,
             fontWeight: 'bold',
             color: style.color,
-            // Separación mayor respecto al nodo según el nivel de la serie
             distance: currentPosition === 'top' ? (idx === 2 ? 16 : 10) : 10,
-            // Fondo blanco limpio para evitar que la línea atraviese el texto
+            // Caja protectora blanca con borde tenue del color de la serie
             backgroundColor: '#FFFFFF',
-            padding: [2, 3],
-            borderRadius: 2,
+            borderColor: style.color,
+            borderWidth: 1,
+            borderRadius: 3,
+            padding: [2, 4],
             formatter: (params) => {
               if (params.value === null || params.value === undefined) return '';
               const num = new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 }).format(params.value);
-              return `$${num}`;
+              // Muestra el ícono del nodo + la cifra formateada
+              return `${iconSymbol} $${num}`;
             }
           },
           labelLayout: {
