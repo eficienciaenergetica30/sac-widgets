@@ -266,7 +266,7 @@
 
       // 7. Opciones finales del gráfico con GRID ampliado
       const option = {
-        title: { text: this._chartTitle, left: 'center', textStyle: { color: '#1A202C', fontSize: 16 } },
+        title: { show: false }, // Oculta el título interno para usar solo el de SAC,
         tooltip: {
           trigger: 'axis',
           valueFormatter: (value) => (value !== null && value !== undefined ? new Intl.NumberFormat('en-US').format(value) : '-')
