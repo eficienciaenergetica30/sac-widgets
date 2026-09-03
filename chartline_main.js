@@ -168,9 +168,8 @@
       const categories = Array.from(categoriesSet).sort();
       const seriesNames = Object.keys(seriesMap).sort();
 
-      // 5. Construcción de series para ECharts optimizada para Impresión
-      // Definimos posiciones alternadas para evitar colisiones sin ocultar datos
-      const labelPositions = ['top', 'bottom', 'top', 'bottom'];
+      // 5. Construcción de series optimizada para Impresión y despeje de líneas
+      const positions = ['top', 'bottom', 'top', 'bottom'];
 
       const echartsSeries = seriesNames.map((sName, idx) => {
         const style = STYLE_CONFIGS[idx % STYLE_CONFIGS.length];
@@ -179,8 +178,7 @@
         const firstValidIdx = dataValues.findIndex((v) => v !== null && v !== undefined);
         const firstVal = firstValidIdx !== -1 ? dataValues[firstValidIdx] : null;
 
-        // Alterna la posición de las etiquetas según la serie (arriba / abajo)
-        const currentPosition = labelPositions[idx % labelPositions.length];
+        const currentPosition = positions[idx % positions.length];
 
         return {
           name: sName,
@@ -193,20 +191,25 @@
           symbolSize: style.symbolSize,
           label: {
             show: true,
-            position: currentPosition, // Alterna posición para que no se encimen
+            position: currentPosition,
             fontSize: 8.5,
             fontWeight: 'bold',
-            color: style.color, // Toma el color de su propia línea para legibilidad
-            distance: 6,
+            color: style.color,
+            // Separación mayor respecto al nodo según el nivel de la serie
+            distance: currentPosition === 'top' ? (idx === 2 ? 16 : 10) : 10,
+            // Fondo blanco limpio para evitar que la línea atraviese el texto
+            backgroundColor: '#FFFFFF',
+            padding: [2, 3],
+            borderRadius: 2,
             formatter: (params) => {
               if (params.value === null || params.value === undefined) return '';
               const num = new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 }).format(params.value);
-              return `$${num}`; // Formato directo con signo de pesos al inicio ($471,974,522)
+              return `$${num}`;
             }
           },
-          // Desactivamos hideOverlap para forzar la impresión de TODOS los datos
           labelLayout: {
-            hideOverlap: false
+            hideOverlap: false,
+            moveOverlap: 'shiftY'
           },
           data: dataValues,
           markPoint: firstValidIdx !== -1 ? {
@@ -220,7 +223,7 @@
                 fontWeight: 'bold',
                 color: style.color,
                 fontSize: 12,
-                distance: 10
+                distance: 12
               }
             }]
           } : undefined
