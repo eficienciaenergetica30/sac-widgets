@@ -94,6 +94,12 @@ var loadScript = (src) => {
     render() {
       if (!this._chart) return;
 
+      // Imprime en la consola del navegador la primera fila de datos reales
+      if (this._myDataBinding && this._myDataBinding.data && this._myDataBinding.data.length > 0) {
+        console.log("=== ESTRUCTURA REAL FILA 0 ===", JSON.stringify(this._myDataBinding.data[0]));
+        console.log("=== ESTRUCTURA METADATA ===", JSON.stringify(this._myDataBinding.metadata));
+      }
+
       try {
         const styleConfigs = [
           { lineType: 'solid', symbol: 'circle', symbolSize: 9, color: '#2B6CB0' },
