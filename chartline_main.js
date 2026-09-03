@@ -50,7 +50,6 @@ var loadScript = (src) => {
       this.render();
     }
 
-    // Método setter obligatorio para recibir el flujo de data binding de SAC
     set myDataBinding(dataBinding) {
       console.log("== DATOS RECIBIDOS DESDE SAC ==", dataBinding);
       this._myDataBinding = dataBinding;
@@ -70,90 +69,43 @@ var loadScript = (src) => {
       if (this._chart) { this._chart.resize(); this.render(); }
     }
 
-    extractNumericValue(obj) {
-      if (obj === null || obj === undefined) return null;
-      if (typeof obj === 'number') return obj;
-      if (typeof obj === 'string' && !isNaN(Number(obj))) return Number(obj);
-
-      if (typeof obj === 'object') {
-        if (obj.raw !== undefined && obj.raw !== null) return Number(obj.raw);
-        if (obj.value !== undefined && obj.value !== null) return Number(obj.value);
-        if (obj.formatted !== undefined && obj.formatted !== null) {
-          const cleaned = String(obj.formatted).replace(/[^0-9.-]+/g, "");
-          if (!isNaN(Number(cleaned)) && cleaned !== "") return Number(cleaned);
-        }
-
-        for (let key in obj) {
-          const val = this.extractNumericValue(obj[key]);
-          if (val !== null && !isNaN(val)) return val;
-        }
-      }
-      return null;
-    }
-
     render() {
       if (!this._chart) return;
 
-      // Imprime en la consola del navegador la primera fila de datos reales
-      if (this._myDataBinding && this._myDataBinding.data && this._myDataBinding.data.length > 0) {
-        console.log("=== ESTRUCTURA REAL FILA 0 ===", JSON.stringify(this._myDataBinding.data[0]));
-        console.log("=== ESTRUCTURA METADATA ===", JSON.stringify(this._myDataBinding.metadata));
-      }
-
       try {
         const styleConfigs = [
-          { lineType: 'solid', symbol: 'circle', symbolSize: 9, color: '#2B6CB0' },
-          { lineType: 'dashed', symbol: 'rect', symbolSize: 9, color: '#2F855A' },
-          { lineType: 'dotted', symbol: 'triangle', symbolSize: 11, color: '#DD6B20' },
-          { lineType: 'dashDot', symbol: 'diamond', symbolSize: 11, color: '#805AD5' }
+          { lineType: 'solid', symbol: 'circle', symbolSize: 9, color: '#2B6CB0' },    // Azul (2024)
+          { lineType: 'dashed', symbol: 'rect', symbolSize: 9, color: '#2F855A' },     // Verde (2025)
+          { lineType: 'dotted', symbol: 'triangle', symbolSize: 11, color: '#DD6B20' }, // Naranja (2026)
+          { lineType: 'dashDot', symbol: 'diamond', symbolSize: 11, color: '#805AD5' }  // Morado
         ];
 
         let categories = [];
         let seriesMap = {};
-        let measureLabel = 'Valor';
+        let measureLabel = 'Costo (MXN)';
 
-        // Procesar SOLO si SAC envió un arreglo de datos con registros
         if (this._myDataBinding && this._myDataBinding.data && Array.isArray(this._myDataBinding.data) && this._myDataBinding.data.length > 0) {
           const rawData = this._myDataBinding.data;
           let catsSet = new Set();
 
-          if (this._myDataBinding.metadata && this._myDataBinding.metadata.feeds) {
-            const mFeed = this._myDataBinding.metadata.feeds.measures;
-            if (mFeed && mFeed.values && mFeed.values.length > 0) {
-              measureLabel = mFeed.values[0].description || mFeed.values[0].id || measureLabel;
-            }
+          // Título del Eje Y tomado del label en metadata
+          if (this._myDataBinding.metadata && this._myDataBinding.metadata.mainStructureMembers && this._myDataBinding.metadata.mainStructureMembers.measures_0) {
+            measureLabel = this._myDataBinding.metadata.mainStructureMembers.measures_0.label || measureLabel;
           }
 
           rawData.forEach(row => {
-            let catValue = 'Sin Categoría';
-            let seriesValue = 'Serie 1';
+            // dimensions_0 = Año, dimensions_1 = Mes (según tu Builder)
+            const d0 = row.dimensions_0;
+            const d1 = row.dimensions_1;
+            const m0 = row.measures_0;
 
-            // Extracción de Dimensiones (Soporta arreglos u objetos Live Model)
-            if (row.dimensions) {
-              if (Array.isArray(row.dimensions)) {
-                if (row.dimensions[0]) catValue = row.dimensions[0].label || row.dimensions[0].id || catValue;
-                if (row.dimensions[1]) seriesValue = row.dimensions[1].label || row.dimensions[1].id || seriesValue;
-              } else if (typeof row.dimensions === 'object') {
-                const keys = Object.keys(row.dimensions);
-                if (keys.length > 0) {
-                  const d0 = row.dimensions[keys[0]];
-                  catValue = d0?.label || d0?.id || d0 || catValue;
-                }
-                if (keys.length > 1) {
-                  const d1 = row.dimensions[keys[1]];
-                  seriesValue = d1?.label || d1?.id || d1 || seriesValue;
-                }
-              }
-            }
+            const anio = d0?.label || d0?.id || 'Serie';
+            const mes = d1?.label || d1?.id || 'N/A';
+            const val = m0?.raw !== undefined ? Number(m0.raw) : (m0?.value !== undefined ? Number(m0.value) : null);
 
-            // Extracción de Medida
-            let val = this.extractNumericValue(row.measures);
-            if (val === null) val = this.extractNumericValue(row.mainStructureMember);
-            if (val === null) val = this.extractNumericValue(row);
-
-            catsSet.add(catValue);
-            if (!seriesMap[seriesValue]) { seriesMap[seriesValue] = {}; }
-            seriesMap[seriesValue][catValue] = val;
+            catsSet.add(mes);
+            if (!seriesMap[anio]) { seriesMap[anio] = {}; }
+            seriesMap[anio][mes] = val;
           });
 
           categories = Array.from(catsSet).sort();
@@ -216,7 +168,7 @@ var loadScript = (src) => {
           xAxis: {
             type: 'category',
             data: categories,
-            name: 'Categoría',
+            name: 'Mes',
             axisLine: { lineStyle: { color: '#4A5568' } }
           },
           yAxis: {
