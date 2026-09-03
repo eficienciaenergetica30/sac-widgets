@@ -83,6 +83,7 @@ var loadScript = (src) => {
           const rawData = this._myDataBinding.data;
           let catsSet = new Set();
 
+          // Título dinámico del eje Y según la medida
           if (this._myDataBinding.metadata && this._myDataBinding.metadata.feeds) {
             const mFeed = this._myDataBinding.metadata.feeds.measures;
             if (mFeed && mFeed.values && mFeed.values.length > 0) {
@@ -91,10 +92,22 @@ var loadScript = (src) => {
           }
 
           rawData.forEach(row => {
-            const dims = row.dimensions || [];
-            const mes = (dims[0] && (dims[0].label || dims[0].id)) ? (dims[0].label || dims[0].id) : 'N/A';
-            const anio = (dims[1] && (dims[1].label || dims[1].id)) ? (dims[1].label || dims[1].id) : 'Serie 1';
+            let mes = 'N/A';
+            let anio = 'Serie';
 
+            // Extracción agnóstica de Dimensiones (Soporta Live Models)
+            if (row.dimensions) {
+              if (Array.isArray(row.dimensions)) {
+                mes = row.dimensions[0]?.label || row.dimensions[0]?.id || mes;
+                anio = row.dimensions[1]?.label || row.dimensions[1]?.id || anio;
+              } else if (typeof row.dimensions === 'object') {
+                const keys = Object.keys(row.dimensions);
+                if (keys.length > 0) mes = row.dimensions[keys[0]]?.label || row.dimensions[keys[0]]?.id || row.dimensions[keys[0]] || mes;
+                if (keys.length > 1) anio = row.dimensions[keys[1]]?.label || row.dimensions[keys[1]]?.id || row.dimensions[keys[1]] || anio;
+              }
+            }
+
+            // Extracción agnóstica de Medida (Costo / IMPTOTAL / etc.)
             let val = null;
             if (row.measures) {
               if (Array.isArray(row.measures) && row.measures.length > 0) {
@@ -105,15 +118,20 @@ var loadScript = (src) => {
                 const m = row.measures[firstKey];
                 val = m?.raw !== undefined ? m.raw : (m?.value !== undefined ? m.value : m);
               }
+            } else if (row.mainStructureMember) {
+              val = row.mainStructureMember.raw !== undefined ? row.mainStructureMember.raw : row.mainStructureMember.value;
             }
 
-            catsSet.add(mes);
+            if (mes !== 'N/A') { catsSet.add(mes); }
             if (!seriesMap[anio]) { seriesMap[anio] = {}; }
             seriesMap[anio][mes] = (val !== null && val !== undefined && !isNaN(Number(val))) ? Number(val) : null;
           });
 
-          if (catsSet.size > 0) { categories = Array.from(catsSet); }
+          if (catsSet.size > 0) {
+            categories = Array.from(catsSet).sort();
+          }
         } else {
+          // Fallback demo
           seriesMap = {
             '2024': { '01': 8700000, '02': 9888876, '03': 11750914, '04': 16114317, '05': 12472668, '06': 15427862, '07': 18411413, '08': 12157993, '09': 9755709, '10': 8455860, '11': 9181245, '12': 9169808 },
             '2025': { '01': 9888876, '02': 11083120, '03': 11750914, '04': 12519129, '05': 15427862, '06': 11553276, '07': 10545410, '08': 12157993, '09': 9879296, '10': 9181245, '11': 10426376, '12': 12800000 },
@@ -173,9 +191,7 @@ var loadScript = (src) => {
             trigger: 'axis',
             valueFormatter: (value) => value !== null && value !== undefined ? new Intl.NumberFormat('en-US').format(value) : '-'
           },
-          legend: {
-            bottom: 5
-          },
+          legend: { bottom: 5 },
           grid: { left: '8%', right: '5%', bottom: '15%', top: '15%', containLabel: true },
           xAxis: {
             type: 'category',
