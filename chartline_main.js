@@ -223,7 +223,7 @@
       const yAxis = [
         {
           type: 'value',
-          name: primaryMeasureName,
+          name: '',
           axisLine: { show: true, lineStyle: { color: '#4A5568' } },
           splitLine: { lineStyle: { type: 'dashed', color: '#E2E8F0' } },
           axisLabel: {
