@@ -11,22 +11,12 @@
 
   const prepared = document.createElement('template');
   prepared.innerHTML = `
-  <style>
-    :host { display: block; width: 100%; height: 100%; }
-    #wrapper { display: flex; flex-direction: column; width: 100%; height: 100%; }
-    #axisTitle {
-      font-size: 11px;
-      color: #4A5568;
-      padding: 2px 0 0 8px;
-      flex: 0 0 auto;
-    }
-    #root { flex: 1 1 auto; min-height: 380px; }
-  </style>
-  <div id="wrapper">
-    <div id="axisTitle"></div>
+    <style>
+      :host { display: block; width: 100%; height: 100%; }
+      #root { width: 100%; height: 100%; min-height: 400px; }
+    </style>
     <div id="root"></div>
-  </div>
-`;
+  `;
 
   const STYLE_CONFIGS = [
     { lineType: 'solid', symbol: 'circle', symbolSize: 9, color: '#2B6CB0' },
@@ -45,7 +35,6 @@
       this._shadowRoot = this.attachShadow({ mode: 'open' });
       this._shadowRoot.appendChild(prepared.content.cloneNode(true));
       this._root = this._shadowRoot.getElementById('root');
-      this._axisTitleEl = this._shadowRoot.getElementById('axisTitle'); // 👈 nuevo
       this._chart = null;
       this._myDataBinding = {};
       this._chartTitle = ""; // Título eliminado para usar el contenedor de SAC
@@ -231,12 +220,10 @@
         };
       });
 
-      this._axisTitleEl.textContent = primaryMeasureName; // "Costo (MXN)" como texto HTML normal
-
       const yAxis = [
         {
           type: 'value',
-          // sin "name" — el título ya no lo dibuja ECharts
+          name: primaryMeasureName,
           axisLine: { show: true, lineStyle: { color: '#4A5568' } },
           splitLine: { lineStyle: { type: 'dashed', color: '#E2E8F0' } },
           axisLabel: {
@@ -272,7 +259,7 @@
           right: hasSecondaryAxis ? '8%' : '2%',
           bottom: '12%',
           top: '7%',
-          containLabel: true   // 👈 vuelve a true — esto solo afecta el número, no el "name"
+          containLabel: false
         },
         xAxis: {
           type: 'category',
