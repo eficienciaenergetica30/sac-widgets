@@ -37,7 +37,7 @@
       this._root = this._shadowRoot.getElementById('root');
       this._chart = null;
       this._myDataBinding = {};
-      this._chartTitle = "";
+      this._chartTitle = ""; // Título eliminado para usar el contenedor de SAC
       this._xAxisDimensionId = "";
     }
 
@@ -60,8 +60,7 @@
 
     getChartTitle() { return this._chartTitle; }
     setChartTitle(newTitle) {
-      this._chartTitle = newTitle;
-      if (this._chart) { this._chart.setOption({ title: { text: newTitle } }); }
+      this._chartTitle = newTitle || "";
     }
 
     get xAxisDimensionId() { return this._xAxisDimensionId; }
@@ -247,17 +246,18 @@
       }
 
       const option = {
-        title: { show: false }, // Oculta el título interno para usar solo el de SAC
+        title: { show: false }, // Desactivado completamente
         tooltip: {
           trigger: 'axis',
           valueFormatter: (value) => (value !== null && value !== undefined ? new Intl.NumberFormat('en-US').format(value) : '-')
         },
         legend: { bottom: 5, type: 'scroll' },
+        // Grid maximizado utilizando espacios bordes muertos
         grid: {
           left: '1.5%',
           right: hasSecondaryAxis ? '8%' : '2%',
           bottom: '12%',
-          top: '7%', // Ajustado de 14% a 7% para recuperar espacio vertical superior
+          top: '7%',
           containLabel: true
         },
         xAxis: {
