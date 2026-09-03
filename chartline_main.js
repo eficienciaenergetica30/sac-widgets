@@ -168,8 +168,7 @@
       const categories = Array.from(categoriesSet).sort();
       const seriesNames = Object.keys(seriesMap).sort();
 
-      // 5. Construcción de series optimizada para Impresión y despeje de líneas
-      // Mapeo de símbolos Unicode para acompañar la cifra según el tipo de nodo
+     // 5. Construcción de series optimizada con Badges compactos
       const symbolIcons = {
         'circle': '●',
         'rect': '■',
@@ -201,26 +200,24 @@
           label: {
             show: true,
             position: currentPosition,
-            fontSize: 8.5,
+            fontSize: 8, // Ligeramente ajustado para ganar legibilidad horizontal
             fontWeight: 'bold',
             color: style.color,
-            distance: currentPosition === 'top' ? (idx === 2 ? 16 : 10) : 10,
-            // Caja protectora blanca con borde tenue del color de la serie
+            distance: currentPosition === 'top' ? (idx === 2 ? 14 : 9) : 9,
             backgroundColor: '#FFFFFF',
             borderColor: style.color,
             borderWidth: 1,
             borderRadius: 3,
-            padding: [2, 4],
+            padding: [1, 2], // Padding interior mínimo para no ensanchar la caja
             formatter: (params) => {
               if (params.value === null || params.value === undefined) return '';
               const num = new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 }).format(params.value);
-              // Muestra el ícono del nodo + la cifra formateada
               return `${iconSymbol} $${num}`;
             }
           },
           labelLayout: {
             hideOverlap: false,
-            moveOverlap: 'shiftY'
+            moveOverlap: 'shiftX'
           },
           data: dataValues,
           markPoint: firstValidIdx !== -1 ? {
@@ -233,8 +230,8 @@
                 position: 'left',
                 fontWeight: 'bold',
                 color: style.color,
-                fontSize: 12,
-                distance: 12
+                fontSize: 11,
+                distance: 8
               }
             }]
           } : undefined
@@ -267,7 +264,7 @@
         });
       }
 
-      // 7. Opciones finales del gráfico
+      // 7. Opciones finales del gráfico con GRID ampliado
       const option = {
         title: { text: this._chartTitle, left: 'center', textStyle: { color: '#1A202C', fontSize: 16 } },
         tooltip: {
@@ -275,12 +272,13 @@
           valueFormatter: (value) => (value !== null && value !== undefined ? new Intl.NumberFormat('en-US').format(value) : '-')
         },
         legend: { bottom: 5, type: 'scroll' },
+        // MAXIMIZACIÓN DEL ESPACIO HORIZONTAL
         grid: {
-          left: '8%',
-          right: hasSecondaryAxis ? '10%' : '5%',
-          bottom: '15%',
-          top: '15%',
-          containLabel: true
+          left: '1.5%',   // Se reduce al mínimo para aprovechar el hueco muerto a la izquierda
+          right: hasSecondaryAxis ? '8%' : '2%', // Extiende la gráfica hacia la derecha
+          bottom: '12%',
+          top: '14%',
+          containLabel: true // Mantiene las etiquetas de los ejes Y dentro del canvas
         },
         xAxis: {
           type: 'category',
