@@ -50,9 +50,15 @@ var loadScript = (src) => {
       this.render();
     }
 
+    // Método setter obligatorio para recibir el flujo de data binding de SAC
     set myDataBinding(dataBinding) {
+      console.log("== DATOS RECIBIDOS DESDE SAC ==", dataBinding);
       this._myDataBinding = dataBinding;
       this.render();
+    }
+
+    get myDataBinding() {
+      return this._myDataBinding;
     }
 
     getChartTitle() { return this._chartTitle; }
@@ -62,6 +68,27 @@ var loadScript = (src) => {
     }
     refreshChart() {
       if (this._chart) { this._chart.resize(); this.render(); }
+    }
+
+    extractNumericValue(obj) {
+      if (obj === null || obj === undefined) return null;
+      if (typeof obj === 'number') return obj;
+      if (typeof obj === 'string' && !isNaN(Number(obj))) return Number(obj);
+
+      if (typeof obj === 'object') {
+        if (obj.raw !== undefined && obj.raw !== null) return Number(obj.raw);
+        if (obj.value !== undefined && obj.value !== null) return Number(obj.value);
+        if (obj.formatted !== undefined && obj.formatted !== null) {
+          const cleaned = String(obj.formatted).replace(/[^0-9.-]+/g, "");
+          if (!isNaN(Number(cleaned)) && cleaned !== "") return Number(cleaned);
+        }
+
+        for (let key in obj) {
+          const val = this.extractNumericValue(obj[key]);
+          if (val !== null && !isNaN(val)) return val;
+        }
+      }
+      return null;
     }
 
     render() {
@@ -75,15 +102,15 @@ var loadScript = (src) => {
           { lineType: 'dashDot', symbol: 'diamond', symbolSize: 11, color: '#805AD5' }
         ];
 
-        let categories = ['01', '02', '03', '04', '05', '06', '07', '08', '09', '10', '11', '12'];
+        let categories = [];
         let seriesMap = {};
         let measureLabel = 'Valor';
 
+        // Procesar SOLO si SAC envió un arreglo de datos con registros
         if (this._myDataBinding && this._myDataBinding.data && Array.isArray(this._myDataBinding.data) && this._myDataBinding.data.length > 0) {
           const rawData = this._myDataBinding.data;
           let catsSet = new Set();
 
-          // Título dinámico del eje Y según la medida
           if (this._myDataBinding.metadata && this._myDataBinding.metadata.feeds) {
             const mFeed = this._myDataBinding.metadata.feeds.measures;
             if (mFeed && mFeed.values && mFeed.values.length > 0) {
@@ -92,63 +119,50 @@ var loadScript = (src) => {
           }
 
           rawData.forEach(row => {
-            let mes = 'N/A';
-            let anio = 'Serie';
+            let catValue = 'Sin Categoría';
+            let seriesValue = 'Serie 1';
 
-            // Extracción agnóstica de Dimensiones (Soporta Live Models)
+            // Extracción de Dimensiones (Soporta arreglos u objetos Live Model)
             if (row.dimensions) {
               if (Array.isArray(row.dimensions)) {
-                mes = row.dimensions[0]?.label || row.dimensions[0]?.id || mes;
-                anio = row.dimensions[1]?.label || row.dimensions[1]?.id || anio;
+                if (row.dimensions[0]) catValue = row.dimensions[0].label || row.dimensions[0].id || catValue;
+                if (row.dimensions[1]) seriesValue = row.dimensions[1].label || row.dimensions[1].id || seriesValue;
               } else if (typeof row.dimensions === 'object') {
                 const keys = Object.keys(row.dimensions);
-                if (keys.length > 0) mes = row.dimensions[keys[0]]?.label || row.dimensions[keys[0]]?.id || row.dimensions[keys[0]] || mes;
-                if (keys.length > 1) anio = row.dimensions[keys[1]]?.label || row.dimensions[keys[1]]?.id || row.dimensions[keys[1]] || anio;
+                if (keys.length > 0) {
+                  const d0 = row.dimensions[keys[0]];
+                  catValue = d0?.label || d0?.id || d0 || catValue;
+                }
+                if (keys.length > 1) {
+                  const d1 = row.dimensions[keys[1]];
+                  seriesValue = d1?.label || d1?.id || d1 || seriesValue;
+                }
               }
             }
 
-            // Extracción agnóstica de Medida (Costo / IMPTOTAL / etc.)
-            let val = null;
-            if (row.measures) {
-              if (Array.isArray(row.measures) && row.measures.length > 0) {
-                const m = row.measures[0];
-                val = m?.raw !== undefined ? m.raw : (m?.value !== undefined ? m.value : m);
-              } else if (typeof row.measures === 'object') {
-                const firstKey = Object.keys(row.measures)[0];
-                const m = row.measures[firstKey];
-                val = m?.raw !== undefined ? m.raw : (m?.value !== undefined ? m.value : m);
-              }
-            } else if (row.mainStructureMember) {
-              val = row.mainStructureMember.raw !== undefined ? row.mainStructureMember.raw : row.mainStructureMember.value;
-            }
+            // Extracción de Medida
+            let val = this.extractNumericValue(row.measures);
+            if (val === null) val = this.extractNumericValue(row.mainStructureMember);
+            if (val === null) val = this.extractNumericValue(row);
 
-            if (mes !== 'N/A') { catsSet.add(mes); }
-            if (!seriesMap[anio]) { seriesMap[anio] = {}; }
-            seriesMap[anio][mes] = (val !== null && val !== undefined && !isNaN(Number(val))) ? Number(val) : null;
+            catsSet.add(catValue);
+            if (!seriesMap[seriesValue]) { seriesMap[seriesValue] = {}; }
+            seriesMap[seriesValue][catValue] = val;
           });
 
-          if (catsSet.size > 0) {
-            categories = Array.from(catsSet).sort();
-          }
-        } else {
-          // Fallback demo
-          seriesMap = {
-            '2024': { '01': 8700000, '02': 9888876, '03': 11750914, '04': 16114317, '05': 12472668, '06': 15427862, '07': 18411413, '08': 12157993, '09': 9755709, '10': 8455860, '11': 9181245, '12': 9169808 },
-            '2025': { '01': 9888876, '02': 11083120, '03': 11750914, '04': 12519129, '05': 15427862, '06': 11553276, '07': 10545410, '08': 12157993, '09': 9879296, '10': 9181245, '11': 10426376, '12': 12800000 },
-            '2026': { '01': 13300000, '02': 12212213, '03': 10290403, '04': 9016027, '05': 4670825, '06': 8139006 }
-          };
+          categories = Array.from(catsSet).sort();
         }
 
         const seriesNames = Object.keys(seriesMap);
-        const echartsSeries = seriesNames.map((year, idx) => {
+        const echartsSeries = seriesNames.map((sName, idx) => {
           const style = styleConfigs[idx % styleConfigs.length];
-          const dataValues = categories.map(cat => seriesMap[year][cat] !== undefined ? seriesMap[year][cat] : null);
+          const dataValues = categories.map(cat => seriesMap[sName][cat] !== undefined ? seriesMap[sName][cat] : null);
 
           const firstValidIdx = dataValues.findIndex(v => v !== null && v !== undefined);
           const firstVal = firstValidIdx !== -1 ? dataValues[firstValidIdx] : null;
 
           return {
-            name: year,
+            name: sName,
             type: 'line',
             connectNulls: true,
             lineStyle: { type: style.lineType, width: 2.5, color: style.color },
@@ -173,7 +187,7 @@ var loadScript = (src) => {
                 coord: [firstValidIdx, firstVal],
                 label: {
                   show: true,
-                  formatter: year,
+                  formatter: sName,
                   position: 'left',
                   fontWeight: 'bold',
                   color: style.color,
@@ -196,7 +210,7 @@ var loadScript = (src) => {
           xAxis: {
             type: 'category',
             data: categories,
-            name: 'Mes',
+            name: 'Categoría',
             axisLine: { lineStyle: { color: '#4A5568' } }
           },
           yAxis: {
