@@ -88,7 +88,7 @@
       await getScriptPromisify("https://cdnjs.cloudflare.com/ajax/libs/echarts/5.4.3/echarts.min.js");
 
       if (!this._chart) {
-        this._chart = echarts.init(this._root);
+        this._chart = echarts.init(this._root, null, { renderer: 'svg' });
       }
 
       const { data, metadata } = dataBinding;
