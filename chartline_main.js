@@ -255,11 +255,11 @@
         legend: { bottom: 5, type: 'scroll' },
         // Grid maximizado utilizando espacios bordes muertos
         grid: {
-          left: '6%',                          // antes 1.5% — ahora reservamos espacio fijo para las etiquetas del eje Y
-          right: hasSecondaryAxis ? '10%' : '4%',
+          left: '1.5%',
+          right: hasSecondaryAxis ? '8%' : '2%',
           bottom: '12%',
-          top: '10%',                          // un poco más de espacio fijo para el nombre del eje
-          containLabel: false                  // 👈 clave: evita el doble cálculo de layout que deja el texto "fantasma"
+          top: '7%',
+          containLabel: false
         },
         xAxis: {
           type: 'category',
