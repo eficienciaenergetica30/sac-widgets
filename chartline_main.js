@@ -37,7 +37,7 @@
       this._root = this._shadowRoot.getElementById('root');
       this._chart = null;
       this._myDataBinding = {};
-      this._chartTitle = "Reporte de Costos por Región";
+      this._chartTitle = "";
       this._xAxisDimensionId = "";
     }
 
