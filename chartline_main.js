@@ -9,22 +9,6 @@
     });
   };
 
-  const parseMetadata = (metadata) => {
-    if (!metadata) return { dimensions: [], measures: [] };
-    const { dimensions: dimensionsMap, mainStructureMembers: measuresMap } = metadata;
-    const dimensions = [];
-    for (const key in dimensionsMap) {
-      const dimension = dimensionsMap[key];
-      dimensions.push({ key, ...dimension });
-    }
-    const measures = [];
-    for (const key in measuresMap) {
-      const measure = measuresMap[key];
-      measures.push({ key, ...measure });
-    }
-    return { dimensions, measures };
-  };
-
   const prepared = document.createElement('template');
   prepared.innerHTML = `
     <style>
@@ -42,7 +26,7 @@
       this._root = this._shadowRoot.getElementById('root');
       this._chart = null;
       this._myDataBinding = {};
-      this._chartTitle = "Reporte de Costos";
+      this._chartTitle = "Reporte de Costos por Región";
     }
 
     onCustomWidgetResize() {
@@ -73,7 +57,7 @@
 
     async render() {
       const dataBinding = this._myDataBinding;
-      if (!dataBinding || dataBinding.state !== 'success') { return; }
+      if (!dataBinding || dataBinding.state !== 'success' || !dataBinding.data) { return; }
 
       await getScriptPromisify("https://cdnjs.cloudflare.com/ajax/libs/echarts/5.4.3/echarts.min.js");
 
@@ -82,13 +66,24 @@
       }
 
       const { data, metadata } = dataBinding;
-      const { dimensions, measures } = parseMetadata(metadata);
 
-      if (!data || data.length === 0 || dimensions.length === 0 || measures.length === 0) {
-        return;
+      // 1. Obtener las llaves exactas ("dimensions_0", "dimensions_1", "measures_0") desde los feeds
+      const dimFeeds = metadata.feeds.dimensions.values; 
+      const measFeeds = metadata.feeds.measures.values;
+
+      if (!dimFeeds || dimFeeds.length < 2 || !measFeeds || measFeeds.length === 0) {
+        return; // Espera a que el usuario asigne Mes, Año y Costo
       }
 
-      // Estilos configurados para cada Año/Serie (B/N + Color con nodos distintos)
+      const xAxisKey = dimFeeds[0];    // dimensions_0 -> Mes
+      const seriesKey = dimFeeds[1];   // dimensions_1 -> Año
+      const measureKey = measFeeds[0]; // measures_0 -> Costo (MXN)
+
+      // 2. Obtener etiquetas dinámicas para los ejes
+      const xAxisName = metadata.dimensions[xAxisKey]?.description || 'Mes';
+      const measureName = metadata.mainStructureMembers[measureKey]?.label || 'Valor';
+
+      // 3. Estilos de líneas
       const styleConfigs = [
         { lineType: 'solid', symbol: 'circle', symbolSize: 9, color: '#2B6CB0' },    // Azul (2024)
         { lineType: 'dashed', symbol: 'rect', symbolSize: 9, color: '#2F855A' },     // Verde (2025)
@@ -96,20 +91,18 @@
         { lineType: 'dashDot', symbol: 'diamond', symbolSize: 11, color: '#805AD5' }  // Morado
       ];
 
-      // Determinar cuál dimensión es el Año y cuál es el Mes
-      // Si pusiste Año arriba y Mes abajo en el Builder: dimensions[0] = Año, dimensions[1] = Mes
-      const seriesDim = dimensions[0]; 
-      const categoryDim = dimensions.length > 1 ? dimensions[1] : dimensions[0];
-      const primaryMeasure = measures[0];
-
       const categoriesSet = new Set();
       const seriesMap = {};
 
-      // Parseo dinámico estilo SAP oficial
+      // 4. Mapeo ultra-preciso leyendo directo del JSON
       data.forEach(row => {
-        const seriesName = row[seriesDim.key]?.label || row[seriesDim.key]?.id || 'Serie 1';
-        const catName = row[categoryDim.key]?.label || row[categoryDim.key]?.id || 'N/A';
-        const val = row[primaryMeasure.key]?.raw !== undefined ? row[primaryMeasure.key].raw : null;
+        const xObj = row[xAxisKey];
+        const sObj = row[seriesKey];
+        const mObj = row[measureKey];
+
+        const catName = xObj?.label || xObj?.id || 'N/A';
+        const seriesName = sObj?.label || sObj?.id || 'Serie';
+        const val = mObj?.raw !== undefined ? Number(mObj.raw) : null;
 
         categoriesSet.add(catName);
 
@@ -119,21 +112,23 @@
         seriesMap[seriesName][catName] = val;
       });
 
+      // Ordenar los meses ("01", "02", ... "12")
       const categories = Array.from(categoriesSet).sort();
-      const seriesNames = Object.keys(seriesMap);
+      const seriesNames = Object.keys(seriesMap).sort();
 
-      // Construir las series de ECharts con pivote
+      // 5. Construcción de series para ECharts
       const echartsSeries = seriesNames.map((sName, idx) => {
         const style = styleConfigs[idx % styleConfigs.length];
         const dataValues = categories.map(cat => seriesMap[sName][cat] !== undefined ? seriesMap[sName][cat] : null);
 
+        // Ubicar el primer valor válido para poner la etiqueta del año pegada a la línea
         const firstValidIdx = dataValues.findIndex(v => v !== null && v !== undefined);
         const firstVal = firstValidIdx !== -1 ? dataValues[firstValidIdx] : null;
 
         return {
           name: sName,
           type: 'line',
-          connectNulls: true,
+          connectNulls: true, // Conecta los trazos si faltan meses intermedios
           lineStyle: { type: style.lineType, width: 2.5, color: style.color },
           itemStyle: { color: style.color },
           symbol: style.symbol,
@@ -168,8 +163,7 @@
         };
       });
 
-      const measureLabel = primaryMeasure.label || primaryMeasure.description || 'Valor';
-
+      // 6. Opciones finales del gráfico
       const option = {
         title: { text: this._chartTitle, left: 'center', textStyle: { color: '#1A202C', fontSize: 16 } },
         tooltip: {
@@ -181,12 +175,12 @@
         xAxis: {
           type: 'category',
           data: categories,
-          name: categoryDim.description || 'Categoría',
+          name: xAxisName,
           axisLine: { lineStyle: { color: '#4A5568' } }
         },
         yAxis: {
           type: 'value',
-          name: measureLabel,
+          name: measureName,
           axisLine: { show: true, lineStyle: { color: '#4A5568' } },
           splitLine: { lineStyle: { type: 'dashed', color: '#E2E8F0' } },
           axisLabel: {
