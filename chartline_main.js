@@ -38,8 +38,6 @@
       this._chart = null;
       this._myDataBinding = {};
       this._chartTitle = "Reporte de Costos por Región";
-      // ID técnico (metadata.dimensions[key].id) de la dimensión a usar como eje X.
-      // Vacío = usa la primera dimensión agregada en el Builder (dimFeeds[0]).
       this._xAxisDimensionId = "";
     }
 
@@ -66,8 +64,6 @@
       if (this._chart) { this._chart.setOption({ title: { text: newTitle } }); }
     }
 
-    // Propiedad expuesta en el manifiesto (properties.xAxisDimensionId).
-    // Se puede fijar desde el panel de Builder sin tocar el código del widget.
     get xAxisDimensionId() { return this._xAxisDimensionId; }
     set xAxisDimensionId(value) {
       this._xAxisDimensionId = value || "";
@@ -78,9 +74,6 @@
       if (this._chart) { this._chart.resize(); this.render(); }
     }
 
-    // Decide qué dimension_N va al eje X. Orden de prioridad:
-    // 1) el id técnico fijado explícitamente en xAxisDimensionId (propiedad configurable)
-    // 2) la primera dimensión agregada en el Builder (dimFeeds[0]) como fallback
     _resolveXAxisKey(dimFeeds, dimensionsMeta) {
       if (this._xAxisDimensionId) {
         const match = dimFeeds.find((key) => dimensionsMeta[key]?.id === this._xAxisDimensionId);
@@ -101,22 +94,18 @@
 
       const { data, metadata } = dataBinding;
 
-      // 1. Llaves disponibles: N dimensiones, N measures (sin asumir cantidad fija)
       const dimFeeds = metadata.feeds.dimensions.values || [];
       const measFeeds = metadata.feeds.measures.values || [];
 
       if (dimFeeds.length < 1 || measFeeds.length < 1) {
-        return; // Espera a que el usuario asigne al menos 1 dimensión y 1 measure
+        return;
       }
 
-      // 2. Eje X: configurable por propiedad, con fallback a la primera dimensión
       const xAxisKey = this._resolveXAxisKey(dimFeeds, metadata.dimensions);
-      // El resto de las dimensiones (0, 1, N...) se combinan para formar el nombre de cada serie
       const groupDimKeys = dimFeeds.filter((key) => key !== xAxisKey);
 
       const xAxisName = metadata.dimensions[xAxisKey]?.description || 'Categoría';
 
-      // 3. Measures: la primera va al eje Y primario, el resto comparte un eje Y secundario
       const primaryMeasureKey = measFeeds[0];
       const secondaryMeasureKeys = measFeeds.slice(1);
       const hasSecondaryAxis = secondaryMeasureKeys.length > 0;
@@ -127,18 +116,14 @@
         .join(' / ');
 
       const categoriesSet = new Set();
-      // seriesMap: { seriesName: { catName: value } }
       const seriesMap = {};
-      // Recuerda a qué eje (0=primario, 1=secundario) pertenece cada serie
       const seriesAxisMap = {};
 
-      // 4. Recorre cada fila y, dentro de cada fila, cada measure -> una serie
       data.forEach((row) => {
         const xObj = row[xAxisKey];
         const catName = xObj?.label || xObj?.id || 'N/A';
         categoriesSet.add(catName);
 
-        // Combina todas las dimensiones extra en una etiqueta de grupo, ej: "2024 | Norte"
         const groupLabel = groupDimKeys
           .map((key) => row[key]?.label || row[key]?.id)
           .filter(Boolean)
@@ -149,7 +134,6 @@
           const val = mObj?.raw !== undefined ? Number(mObj.raw) : null;
           const measureLabel = metadata.mainStructureMembers[measureKey]?.label || measureKey;
 
-          // Nombre de serie: si hay varias measures, se antepone su nombre para diferenciarlas
           let seriesName;
           if (measFeeds.length > 1) {
             seriesName = groupLabel ? `${measureLabel} — ${groupLabel}` : measureLabel;
@@ -168,7 +152,6 @@
       const categories = Array.from(categoriesSet).sort();
       const seriesNames = Object.keys(seriesMap).sort();
 
-     // 5. Construcción de series optimizada con Badges compactos
       const symbolIcons = {
         'circle': '●',
         'rect': '■',
@@ -200,7 +183,7 @@
           label: {
             show: true,
             position: currentPosition,
-            fontSize: 8, // Ligeramente ajustado para ganar legibilidad horizontal
+            fontSize: 8,
             fontWeight: 'bold',
             color: style.color,
             distance: currentPosition === 'top' ? (idx === 2 ? 14 : 9) : 9,
@@ -208,7 +191,7 @@
             borderColor: style.color,
             borderWidth: 1,
             borderRadius: 3,
-            padding: [1, 2], // Padding interior mínimo para no ensanchar la caja
+            padding: [1, 2],
             formatter: (params) => {
               if (params.value === null || params.value === undefined) return '';
               const num = new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 }).format(params.value);
@@ -238,7 +221,6 @@
         };
       });
 
-      // 6. Eje(s) Y: primario siempre presente; secundario solo si hay >1 measure
       const yAxis = [
         {
           type: 'value',
@@ -264,21 +246,19 @@
         });
       }
 
-      // 7. Opciones finales del gráfico con GRID ampliado
       const option = {
-        title: { show: false }, // Oculta el título interno para usar solo el de SAC,
+        title: { show: false }, // Oculta el título interno para usar solo el de SAC
         tooltip: {
           trigger: 'axis',
           valueFormatter: (value) => (value !== null && value !== undefined ? new Intl.NumberFormat('en-US').format(value) : '-')
         },
         legend: { bottom: 5, type: 'scroll' },
-        // MAXIMIZACIÓN DEL ESPACIO HORIZONTAL
         grid: {
-          left: '1.5%',   // Se reduce al mínimo para aprovechar el hueco muerto a la izquierda
-          right: hasSecondaryAxis ? '8%' : '2%', // Extiende la gráfica hacia la derecha
+          left: '1.5%',
+          right: hasSecondaryAxis ? '8%' : '2%',
           bottom: '12%',
-          top: '14%',
-          containLabel: true // Mantiene las etiquetas de los ejes Y dentro del canvas
+          top: '7%', // Ajustado de 14% a 7% para recuperar espacio vertical superior
+          containLabel: true
         },
         xAxis: {
           type: 'category',
