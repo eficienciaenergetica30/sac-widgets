@@ -13,9 +13,19 @@
   prepared.innerHTML = `
     <style>
       :host { display: block; width: 100%; height: 100%; }
-      #root { width: 100%; height: 100%; min-height: 400px; }
+      #wrapper { display: flex; flex-direction: column; width: 100%; height: 100%; }
+      #axisTitle {
+        font-size: 11px;
+        color: #4A5568;
+        padding: 2px 0 0 8px;
+        flex: 0 0 auto;
+      }
+      #root { flex: 1 1 auto; min-height: 380px; }
     </style>
-    <div id="root"></div>
+    <div id="wrapper">
+      <div id="axisTitle"></div>
+      <div id="root"></div>
+    </div>
   `;
 
   const STYLE_CONFIGS = [
@@ -35,6 +45,7 @@
       this._shadowRoot = this.attachShadow({ mode: 'open' });
       this._shadowRoot.appendChild(prepared.content.cloneNode(true));
       this._root = this._shadowRoot.getElementById('root');
+      this._axisTitleEl = this._shadowRoot.getElementById('axisTitle');
       this._chart = null;
       this._myDataBinding = {};
       this._chartTitle = ""; // Título eliminado para usar el contenedor de SAC
@@ -113,6 +124,10 @@
       const secondaryMeasureName = secondaryMeasureKeys
         .map((k) => metadata.mainStructureMembers[k]?.label || k)
         .join(' / ');
+
+      // Título del eje Y como texto HTML normal (fuera del ciclo de layout de ECharts,
+      // evita el "fantasma" duplicado que aparecía en el export a PDF)
+      this._axisTitleEl.textContent = primaryMeasureName;
 
       const categoriesSet = new Set();
       const seriesMap = {};
@@ -223,7 +238,7 @@
       const yAxis = [
         {
           type: 'value',
-          name: primaryMeasureName,
+          // sin "name" aquí — el título ahora vive en #axisTitle (HTML), no en ECharts
           axisLine: { show: true, lineStyle: { color: '#4A5568' } },
           splitLine: { lineStyle: { type: 'dashed', color: '#E2E8F0' } },
           axisLabel: {
@@ -247,19 +262,18 @@
 
       const option = {
         title: { show: false }, // Desactivado completamente
-        animation: false, // 👈
+        animation: false, // Evita que el export a PDF capture la línea a medio dibujar
         tooltip: {
           trigger: 'axis',
           valueFormatter: (value) => (value !== null && value !== undefined ? new Intl.NumberFormat('en-US').format(value) : '-')
         },
         legend: { bottom: 5, type: 'scroll' },
-        // Grid maximizado utilizando espacios bordes muertos
         grid: {
           left: '1.5%',
           right: hasSecondaryAxis ? '8%' : '2%',
           bottom: '12%',
           top: '7%',
-          containLabel: false
+          containLabel: true // vuelve a true: calcula automáticamente el espacio real de las etiquetas numéricas
         },
         xAxis: {
           type: 'category',
