@@ -255,10 +255,10 @@
         legend: { bottom: 5, type: 'scroll' },
         // Grid maximizado utilizando espacios bordes muertos
         grid: {
-          left: '1.5%',
+          left: '4%',
           right: hasSecondaryAxis ? '8%' : '2%',
           bottom: '12%',
-          top: '7%',
+          top: '10%',
           containLabel: false
         },
         xAxis: {
