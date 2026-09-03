@@ -247,6 +247,7 @@
 
       const option = {
         title: { show: false }, // Desactivado completamente
+        animation: false, // 👈
         tooltip: {
           trigger: 'axis',
           valueFormatter: (value) => (value !== null && value !== undefined ? new Intl.NumberFormat('en-US').format(value) : '-')
