@@ -168,14 +168,19 @@
       const categories = Array.from(categoriesSet).sort();
       const seriesNames = Object.keys(seriesMap).sort();
 
-      // 5. Construcción de series para ECharts
-      // 5. Construcción de series para ECharts
+      // 5. Construcción de series para ECharts optimizada para Impresión
+      // Definimos posiciones alternadas para evitar colisiones sin ocultar datos
+      const labelPositions = ['top', 'bottom', 'top', 'bottom'];
+
       const echartsSeries = seriesNames.map((sName, idx) => {
         const style = STYLE_CONFIGS[idx % STYLE_CONFIGS.length];
         const dataValues = categories.map((cat) => (seriesMap[sName][cat] !== undefined ? seriesMap[sName][cat] : null));
 
         const firstValidIdx = dataValues.findIndex((v) => v !== null && v !== undefined);
         const firstVal = firstValidIdx !== -1 ? dataValues[firstValidIdx] : null;
+
+        // Alterna la posición de las etiquetas según la serie (arriba / abajo)
+        const currentPosition = labelPositions[idx % labelPositions.length];
 
         return {
           name: sName,
@@ -188,20 +193,20 @@
           symbolSize: style.symbolSize,
           label: {
             show: true,
-            position: 'top',
-            fontSize: 9,
+            position: currentPosition, // Alterna posición para que no se encimen
+            fontSize: 8.5,
             fontWeight: 'bold',
-            color: '#2D3748',
+            color: style.color, // Toma el color de su propia línea para legibilidad
+            distance: 6,
             formatter: (params) => {
               if (params.value === null || params.value === undefined) return '';
               const num = new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 }).format(params.value);
-              // Punto 1: Validar si la serie corresponde a Costo para agregar sufijo
-              return sName.toUpperCase().includes('COSTO') ? `${num} $` : num;
+              return `$${num}`; // Formato directo con signo de pesos al inicio ($471,974,522)
             }
           },
-          // Punto 2: Evitar amontonamiento automático
+          // Desactivamos hideOverlap para forzar la impresión de TODOS los datos
           labelLayout: {
-            hideOverlap: true
+            hideOverlap: false
           },
           data: dataValues,
           markPoint: firstValidIdx !== -1 ? {
