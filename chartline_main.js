@@ -169,6 +169,7 @@
       const seriesNames = Object.keys(seriesMap).sort();
 
       // 5. Construcción de series para ECharts
+      // 5. Construcción de series para ECharts
       const echartsSeries = seriesNames.map((sName, idx) => {
         const style = STYLE_CONFIGS[idx % STYLE_CONFIGS.length];
         const dataValues = categories.map((cat) => (seriesMap[sName][cat] !== undefined ? seriesMap[sName][cat] : null));
@@ -193,8 +194,14 @@
             color: '#2D3748',
             formatter: (params) => {
               if (params.value === null || params.value === undefined) return '';
-              return new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 }).format(params.value);
+              const num = new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 }).format(params.value);
+              // Punto 1: Validar si la serie corresponde a Costo para agregar sufijo
+              return sName.toUpperCase().includes('COSTO') ? `${num} $` : num;
             }
+          },
+          // Punto 2: Evitar amontonamiento automático
+          labelLayout: {
+            hideOverlap: true
           },
           data: dataValues,
           markPoint: firstValidIdx !== -1 ? {
